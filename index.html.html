@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DI Expert Survey — ONE App UX/UI 개편</title>
+
+  <!-- SortableJS for drag-and-drop Q7 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+
+  <style>
+    /* ─────────────────────────────────────────
+       DESIGN TOKENS
+    ───────────────────────────────────────── */
+    :root {
+      --brand-primary:   #0057A8;   /* Viatris deep blue */
+      --brand-accent:    #00A3E0;   /* Sky blue highlight */
+      --brand-dark:      #003366;   /* Deep navy */
+      --brand-success:   #1DB87B;   /* Confirmation green */
+      --bg-page:         #F0F4FA;
+      --bg-card:         #FFFFFF;
+      --bg-progress:     #E2EAF4;
+      --text-primary:    #1A2340;
+      --text-secondary:  #5A6680;
+      --text-placeholder:#9AA3B5;
+      --border-light:    #DDE5F0;
+      --border-focus:    #00A3E0;
+      --option-hover:    #EEF5FF;
+      --option-selected: #E0EFFF;
+      --option-selected-border: #0057A8;
+      --shadow-card:     0 2px 16px rgba(0,57,102,0.08);
+      --shadow-card-lg:  0 4px 32px rgba(0,57,102,0.12);
+      --radius-card:     16px;
+      --radius-option:   10px;
+      --font-main:       'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      --transition:      0.22s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ─────────────────────────────────────────
+       RESET & BASE
+    ───────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-main);
+      background: var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100dvh;
+      overscroll-behavior: none;
+    }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+    textarea, input { font-family: inherit; }
+    ul, ol { list-style: none; }
+
+    /* ─────────────────────────────────────────
+       STICKY PROGRESS BAR (top)
+    ───────────────────────────────────────── */
+    #progress-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-light);
+      padding: 10px 20px;
+      box-shadow: 0 2px 12px rgba(0,57,102,0.07);
+    }
+    .progress-inner {
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .progress-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--brand-primary);
+      white-space: nowrap;
+      min-width: 56px;
+    }
+    .progress-bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--bg-progress);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-accent));
+      border-radius: 99px;
+      transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+      width: 0%;
+    }
+    .progress-pct {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--brand-accent);
+      min-width: 32px;
+      text-align: right;
+    }
+
+    /* ─────────────────────────────────────────
+       MAIN LAYOUT
+    ───────────────────────────────────────── */
+    #app {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 24px 16px 100px;
+      min-height: calc(100dvh - 60px);
+    }
+
+    /* ─────────────────────────────────────────
+       SCREEN TRANSITIONS
+    ───────────────────────────────────────── */
+    .screen {
+      display: none;
+      animation: fadeSlideIn 0.35s var(--transition);
+    }
+    .screen.active { display: block; }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─────────────────────────────────────────
+       INTRO SCREEN
+    ───────────────────────────────────────── */
+    .intro-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card-lg);
+      overflow: hidden;
+    }
+    .intro-hero {
+      background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand-primary) 60%, var(--brand-accent) 100%);
+      padding: 40px 28px 36px;
+      position: relative;
+      overflow: hidden;
+    }
+    .intro-hero::before {
+      content: '';
+      position: absolute;
+      right: -40px; top: -40px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+    }
+    .intro-hero::after {
+      content: '';
+      position: absolute;
+      left: -20px; bottom: -60px;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(0,163,224,0.12);
+    }
+    .intro-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 99px;
+      margin-bottom: 16px;
+    }
+    .intro-title {
+      color: #fff;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 8px;
+      position: relative;
+      z-index: 1;
+    }
+    .intro-sub {
+      color: rgba(255,255,255,0.75);
+      font-size: 13px;
+      line-height: 1.6;
+      position: relative;
+      z-index: 1;
+    }
+    .intro-body {
+      padding: 28px;
+    }
+    .intro-desc {
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+    .intro-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .intro-meta-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      background: var(--bg-page);
+      border-radius: 10px;
+    }
+    .meta-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .meta-icon svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .meta-text { font-size: 13px; line-height: 1.5; }
+    .meta-text strong { color: var(--brand-primary); font-weight: 700; display: block; }
+    .intro-notice {
+      font-size: 12px;
+      color: var(--text-placeholder);
+      background: #FFF8E7;
+      border-left: 3px solid #FFC107;
+      padding: 10px 12px;
+      border-radius: 0 8px 8px 0;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+    .btn-start {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 12px;
+      letter-spacing: 0.02em;
+      transition: all var(--transition);
+      box-shadow: 0 4px 20px rgba(0,87,168,0.35);
+    }
+    .btn-start:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(0,87,168,0.42); }
+    .btn-start:active { transform: translateY(0); }
+
+    /* ─────────────────────────────────────────
+       QUESTION SCREEN
+    ───────────────────────────────────────── */
+    .q-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .q-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--brand-primary);
+      background: var(--option-selected);
+      padding: 5px 10px;
+      border-radius: 99px;
+    }
+    .q-section-label {
+      font-size: 11px;
+      color: var(--text-placeholder);
+      font-weight: 600;
+    }
+    .q-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      padding: 24px 20px;
+      margin-bottom: 16px;
+    }
+    .q-num {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--brand-accent);
+      margin-bottom: 8px;
+      letter-spacing: 0.04em;
+    }
+    .q-text {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.55;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .q-note {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 16px;
+      padding: 10px 12px;
+      background: var(--bg-page);
+      border-radius: 8px;
+      border-left: 3px solid var(--border-light);
+    }
+    .q-limit-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--brand-primary);
+      background: var(--option-selected);
+      padding: 3px 9px;
+      border-radius: 99px;
+      margin-bottom: 14px;
+    }
+    .q-limit-badge.warn { color: #D97706; background: #FEF3C7; }
+
+    /* OPTIONS (checkbox / radio) */
+    .options-list { display: flex; flex-direction: column; gap: 8px; }
+    .option-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 14px;
+      border: 1.5px solid var(--border-light);
+      border-radius: var(--radius-option);
+      cursor: pointer;
+      transition: all var(--transition);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .option-item:hover { border-color: var(--brand-accent); background: var(--option-hover); }
+    .option-item.selected {
+      border-color: var(--option-selected-border);
+      background: var(--option-selected);
+    }
+    .option-item.selected .option-mark { background: var(--brand-primary); border-color: var(--brand-primary); }
+    .option-item.selected .option-mark::after { opacity: 1; }
+    .option-mark {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--border-light);
+      background: #fff;
+      flex-shrink: 0;
+      position: relative;
+      transition: all var(--transition);
+    }
+    .option-mark.square { border-radius: 6px; }
+    .option-mark::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #fff;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+    .option-mark.square::after {
+      border-radius: 2px;
+      top: 2px; left: 2px;
+      width: 12px; height: 12px;
+      background: none;
+      border: 2px solid #fff;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg) translate(-2px, -3px);
+    }
+    .option-text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-primary);
+      flex: 1;
+    }
+    .option-item.selected .option-text { font-weight: 600; color: var(--brand-dark); }
+
+    /* OTHER (기타) input */
+    .other-input-wrap { display: none; margin-top: 8px; }
+    .other-input-wrap.visible { display: block; }
+    .other-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border-light);
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--bg-page);
+      transition: border-color var(--transition);
+      outline: none;
+    }
+    .other-input:focus { border-color: var(--border-focus); background: #fff; }
+
+    /* TEXTAREA */
+    .q-textarea {
+      width: 100%;
+      min-height: 130px;
+      padding: 14px;
+      border: 1.5px solid var(--border-light);
+      border-radius: 10px;
+      font-size: 14px;
+      color: var(--text-primary);
+      line-height: 1.7;
+      resize: vertical;
+      outline: none;
+      background: var(--bg-page);
+      transition: border-color var(--transition);
+    }
+    .q-textarea:focus { border-color: var(--border-focus); background: #fff; }
+    .q-textarea::placeholder { color: var(--text-placeholder); }
+
+    /* Q1 YES/NO big buttons */
+    .yesno-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .yesno-btn {
+      padding: 20px 12px;
+      border: 2px solid var(--border-light);
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      background: var(--bg-card);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transition: all var(--transition);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .yesno-btn .yn-icon { font-size: 28px; }
+    .yesno-btn:hover { border-color: var(--brand-accent); color: var(--brand-primary); background: var(--option-hover); }
+    .yesno-btn.selected { border-color: var(--brand-primary); color: var(--brand-primary); background: var(--option-selected); }
+
+    /* DRAG & DROP — Q7 */
+    .sortable-list { display: flex; flex-direction: column; gap: 8px; }
+    .sortable-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 14px;
+      border: 1.5px solid var(--border-light);
+      border-radius: var(--radius-option);
+      background: var(--bg-card);
+      cursor: grab;
+      transition: all var(--transition);
+      box-shadow: 0 1px 4px rgba(0,57,102,0.05);
+    }
+    .sortable-item:active { cursor: grabbing; }
+    .sortable-item.sortable-ghost { opacity: 0.45; background: var(--option-hover); }
+    .sortable-item.sortable-drag { box-shadow: var(--shadow-card-lg); border-color: var(--brand-accent); }
+    .sort-rank {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .sort-drag-icon {
+      color: var(--text-placeholder);
+      display: flex;
+      align-items: center;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    .sort-text { font-size: 14px; line-height: 1.5; flex: 1; }
+    .sort-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; line-height: 1.5; }
+    .drag-hint {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-placeholder);
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* FILE UPLOAD — Q8 */
+    .file-upload-area {
+      border: 2px dashed var(--border-light);
+      border-radius: 12px;
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      background: var(--bg-page);
+      margin-top: 16px;
+    }
+    .file-upload-area:hover, .file-upload-area.drag-over {
+      border-color: var(--brand-accent);
+      background: var(--option-hover);
+    }
+    .file-upload-icon { font-size: 32px; margin-bottom: 8px; }
+    .file-upload-text { font-size: 14px; font-weight: 600; color: var(--brand-primary); margin-bottom: 4px; }
+    .file-upload-sub { font-size: 12px; color: var(--text-placeholder); }
+    #file-input { display: none; }
+    .file-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+    .file-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--option-selected);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--brand-dark);
+      font-weight: 600;
+    }
+    .file-chip-remove {
+      margin-left: auto;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0,57,102,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 10px;
+      flex-shrink: 0;
+      transition: background var(--transition);
+    }
+    .file-chip-remove:hover { background: rgba(220,38,38,0.15); color: #DC2626; }
+
+    /* ─────────────────────────────────────────
+       NAV BUTTONS
+    ───────────────────────────────────────── */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-light);
+      padding: 12px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      z-index: 90;
+      box-shadow: 0 -2px 20px rgba(0,57,102,0.08);
+    }
+    .nav-inner {
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      gap: 10px;
+    }
+    .btn-prev {
+      padding: 14px 20px;
+      border: 1.5px solid var(--border-light);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      background: var(--bg-card);
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+    .btn-prev:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+    .btn-next {
+      flex: 1;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 12px;
+      transition: all var(--transition);
+      box-shadow: 0 3px 16px rgba(0,87,168,0.3);
+      letter-spacing: 0.02em;
+    }
+    .btn-next:hover { transform: translateY(-1px); box-shadow: 0 5px 22px rgba(0,87,168,0.38); }
+    .btn-next:active { transform: translateY(0); }
+    .btn-next:disabled { background: var(--border-light); color: var(--text-placeholder); box-shadow: none; transform: none; cursor: not-allowed; }
+
+    /* ─────────────────────────────────────────
+       TOAST NOTIFICATION
+    ───────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: #1A2340;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 12px 20px;
+      border-radius: 99px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+      z-index: 999;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ─────────────────────────────────────────
+       THANK YOU SCREEN
+    ───────────────────────────────────────── */
+    .thankyou-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card-lg);
+      overflow: hidden;
+      text-align: center;
+    }
+    .thankyou-hero {
+      background: linear-gradient(135deg, var(--brand-dark), var(--brand-primary));
+      padding: 48px 28px 40px;
+    }
+    .ty-checkmark {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--brand-success);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+    .ty-checkmark svg { width: 36px; height: 36px; stroke: #fff; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .ty-title { color: #fff; font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .ty-sub { color: rgba(255,255,255,0.75); font-size: 14px; line-height: 1.6; }
+    .thankyou-body { padding: 32px 28px; }
+    .ty-message {
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      margin-bottom: 28px;
+    }
+    .ty-highlight {
+      background: var(--option-selected);
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 13px;
+      color: var(--brand-primary);
+      font-weight: 600;
+      line-height: 1.6;
+    }
+
+    /* ─────────────────────────────────────────
+       VALIDATION ERROR
+    ───────────────────────────────────────── */
+    .field-error {
+      font-size: 12px;
+      color: #DC2626;
+      font-weight: 600;
+      margin-top: 8px;
+      display: none;
+      padding: 6px 10px;
+      background: #FEF2F2;
+      border-radius: 6px;
+    }
+    .field-error.visible { display: block; }
+
+    /* ─────────────────────────────────────────
+       RESPONSIVE
+    ───────────────────────────────────────── */
+    @media (min-width: 640px) {
+      #app { padding: 32px 24px 100px; }
+      .q-text { font-size: 17px; }
+      .intro-title { font-size: 26px; }
+      .q-card { padding: 28px 28px; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ─── STICKY PROGRESS HEADER ─── -->
+<header id="progress-header" style="display:none;">
+  <div class="progress-inner">
+    <span class="progress-label" id="progress-step">1 / 8</span>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progress-fill"></div>
+    </div>
+    <span class="progress-pct" id="progress-pct">0%</span>
+  </div>
+</header>
+
+<!-- ─── TOAST ─── -->
+<div id="toast"></div>
+
+<!-- ─── MAIN APP ─── -->
+<main id="app">
+
+  <!-- ══════════════════════════════
+       SCREEN 0: INTRO
+  ══════════════════════════════ -->
+  <section class="screen active" id="screen-intro">
+    <div class="intro-card">
+      <div class="intro-hero">
+        <div class="intro-title">ONE App<br>UX/UI 개편 설문</div>
+        <div class="intro-sub">현장의 목소리로 더 나은 앱을 만들겠습니다</div>
+        <div style="margin-top:16px;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.12);border-radius:8px;padding:7px 12px;position:relative;z-index:1;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span style="font-size:12px;color:rgba(255,255,255,0.85);font-weight:600;letter-spacing:0.03em;">주관 · Digital Innovation Team</span>
+        </div>
+      </div>
+      <div class="intro-body">
+        <p class="intro-desc">
+          본 서베이는 기존 ONE App을 Myforce App과 함께 시너지를 내며 영업 현장에 현실적으로 도움을 줄 수 있는 구조로 변경하고자 UX/UI 개편을 위한 자문 목적으로 진행됩니다.<br><br>
+          단순 평가가 아닌, 현장의 업무 흐름과 기존 ONE App 구조의 불편 사항을 파악하기 위해 마련되었습니다.
+        </p>
+        <div class="intro-meta">
+          <div class="intro-meta-item">
+            <div class="meta-icon">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="meta-text">
+              <strong>예상 소요 시간</strong>
+              약 20분 (총 2개 Section, 최대 8문항)
+            </div>
+          </div>
+          <div class="intro-meta-item">
+            <div class="meta-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="meta-text">
+              <strong>응답 방식</strong>
+              익명 처리 — 개인 식별 정보를 수집하지 않습니다
+            </div>
+          </div>
+        </div>
+        <div class="intro-notice">
+          ⚠️ 중간 저장이 어려울 수 있으니, 시간이 확보된 상태에서 한 번에 응답해 주시면 감사하겠습니다.
+        </div>
+        <button class="btn-start" onclick="startSurvey()">설문 시작하기 →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       SCREEN Q1: 주 2회 이상 활용?
+  ══════════════════════════════ -->
+  <section class="screen" id="screen-q1">
+    <div class="q-meta">
+      <span class="q-tag">Section 1 · Q1</span>
+      <span class="q-section-label">ONE App 활용 현황</span>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <div class="q-text">ONE App을 일주일에 2번 이상 활용하시나요?</div>
+      <div style="height:20px;"></div>
+      <div class="yesno-grid">
+        <button class="yesno-btn" id="q1-yes" onclick="selectQ1('yes')">
+          <span class="yn-icon">✅</span>
+          <span>예</span>
+        </button>
+        <button class="yesno-btn" id="q1-no" onclick="selectQ1('no')">
+          <span class="yn-icon">❌</span>
+          <span>아니오</span>
+        </button>
+      </div>
+      <div class="field-error" id="q1-error">응답을 선택해주세요.</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       SCREEN Q2: 잘 활용하는 기능 [예 경로]
+  ══════════════════════════════ -->
+  <section class="screen" id="screen-q2">
+    <div class="q-meta">
+      <span class="q-tag">Section 1 · Q2</span>
+      <span class="q-section-label">ONE App 활용 현황</span>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <div class="q-text">기존 ONE App에서 가장 잘 활용하고 있는 기능은 무엇입니까?</div>
+      <div class="q-note">* HCP Onekey ID 조회, 심포지엄 등록, 환자교육용 자료 신청서 등록/인수증 제출과 같이 ONE App에서만 할 수 있는 기능은 보기에서 제외되어 있습니다.</div>
+      <div class="q-limit-badge" id="q2-limit-badge">최대 3개 선택</div>
+      <ul class="options-list" id="q2-options">
+        <!-- Rendered by JS -->
+      </ul>
+      <div class="other-input-wrap" id="q2-other-wrap">
+        <input type="text" class="other-input" id="q2-other-input" placeholder="기타 내용을 입력해주세요" />
+      </div>
+      <div class="field-error" id="q2-error">최소 1개 이상 선택해주세요.</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       SCREEN Q3: 추천 기능 [예 경로]
+  ══════════════════════════════ -->
+  <section class="screen" id="screen-q3">
+    <div class="q-meta">
+      <span class="q-tag">Section 1 · Q3</span>
+      <span class="q-section-label">ONE App 활용 현황</span>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <div class="q-text">기존 ONE App에서 동료에게 추천하고 싶은 기능은 무엇입니까?</div>
+      <div class="q-note">* HCP Onekey ID 조회, 심포지엄 등록, 환자교육용 자료 신청서 등록/인수증 제출과 같이 ONE App에서만 할 수 있는 기능은 보기에서 제외되어 있습니다.</div>
+      <div class="q-limit-badge" id="q3-limit-badge">최대 2개 선택</div>
+      <ul class="options-list" id="q3-options">
+        <!-- Rendered by JS -->
+      </ul>
+      <div class="other-input-wrap" id="q3-other-wrap">
+        <input type="text" class="other-input" id="q3-other-input" placeholder="기타 내용을 입력해주세요" />
+      </div>
+      <div class="field-error" id="q3-error">최소 1개 이상 선택해주세요.</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       SCREEN Q4: 활용 않는 기능 [예 경로]
+  ══════════════════════════════ -->
+  <section class="screen" id="screen-q4">
+    <div class="q-meta">
+      <span class="q-tag">Section 1 · Q4</span>
+      <span class="q-section-label">ONE App 활용 현황</span>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q4</div>
+      <div class="q-text">기존 ONE App에서 잘 활용하지 않는 기능은 무엇입니까?</div>
+      <div class="q-note">* HCP Onekey ID 조회, 심포지엄 등록, 환자교육용 자료 신청서 등록/인수증 제출과 같이 ONE App에서만 할 수 있는 기능은 보기에서 제외되어 있습니다.</div>
+      <div class="q-limit-badge" id="q4-limit-badge">최대 3개 선택</div>
+      <ul class="options-list" id="q4-options">
+        <!-- Rendered by JS -->
+      </ul>
+      <div class="other-input-wrap" id="q4-other-wrap">
+        <input type="text" class="other-input" id="q4-other-input" placeholder="기타 내용을 입력해주세요" />
+      </div>
+      <div class="field-error" id="q4-error">최소 1개 이상 선택해주세요.</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       SCREEN Q5: 활용 않는 이유 [예 경로]
+  ══════════════════════════════ -->
+  <section class="screen" id="screen-q5">
+    <div class="q-meta">
+      <span class="q-tag">Section 1 · Q5</span>
+      <span class="q-section-label">ONE App 활용 현황</span>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q5</div>
+      <div class="q-text">Q4에서 선택한 기능들을 잘 활용하지 않는 이유는 무엇입니까?</div>
+      <div class="q-limit-badge">단일 선택</div>
+      <ul class="options-list" id="q5-options">
+        <!-- Rendered by JS -->
+      </ul>
+      <div class="other-input-wrap" id="q5-other-wrap">
+        <input type="text" class="other-input" id="q5-other-input" placeholder="기타 내용을 입력해주세요" />
+      </div>
+      <div class="field-error" id="q5-error">응답을 선택해주세요.</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       SCREEN Q6: 대체 채널 [예 경로]
+  ══════════════════════════════ -->
+  <section class="screen" id="screen-q6">
+    <div class="q-meta">
+      <span class="q-tag">Section 1 · Q6</span>
+      <span class="q-section-label">ONE App 활용 현황</span>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q6</div>
+      <div class="q-text">ONE App에서도 활용 가능한 기능이지만, ONE App 대신 다른 채널 또는 도구를 사용하시는 경우, 어떤 채널 또는 도구를 사용하십니까? 그 이유는 무엇입니까?</div>
+      <div class="q-note">
+        예시:<br>
+        1. 문헌 및 디테일 자료는 공지메일, MKT/Sales 팀즈방, 아이패드에 별도 저장하여 활용<br>
+        2. 카카오 채널 가입 활동은 카카오에서 '비아트리스' 채널 직접 검색, 가입 QR코드 별도 저장하여 활용<br>
+        3. Sales 데이터는 각 데이터를 볼 수 있는 사이트에서 확인
+      </div>
+      <textarea class="q-textarea" id="q6-answer" placeholder="자유롭게 작성해주세요 (필수)"></textarea>
+      <div class="field-error" id="q6-error">내용을 입력해주세요.</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       SCREEN Q2-N: 활용 않는 이유 [아니오 경로]
+  ══════════════════════════════ -->
+  <section class="screen" id="screen-q2n">
+    <div class="q-meta">
+      <span class="q-tag">Section 1 · Q2-N</span>
+      <span class="q-section-label">ONE App 활용 현황</span>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2-N</div>
+      <div class="q-text">현재 ONE App을 자주 활용하지 않는 가장 큰 이유는 무엇입니까?</div>
+      <div class="q-limit-badge" id="q2n-limit-badge">1개 선택</div>
+      <ul class="options-list" id="q2n-options">
+        <!-- Rendered by JS -->
+      </ul>
+      <div class="other-input-wrap" id="q2n-other-wrap">
+        <input type="text" class="other-input" id="q2n-other-input" placeholder="기타 내용을 입력해주세요" />
+      </div>
+      <div class="field-error" id="q2n-error">최소 1개 이상 선택해주세요.</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       SCREEN Q3-N: 대체 채널 [아니오 경로]
+  ══════════════════════════════ -->
+  <section class="screen" id="screen-q3n">
+    <div class="q-meta">
+      <span class="q-tag">Section 1 · Q3-N</span>
+      <span class="q-section-label">ONE App 활용 현황</span>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3-N</div>
+      <div class="q-text">ONE App 대신 주로 활용하는 채널 또는 도구는 무엇입니까? 그 이유는 무엇입니까?</div>
+      <div class="q-note">
+        예시:<br>
+        1. 문헌 및 디테일 자료는 공지메일, MKT/Sales 팀즈방, 아이패드에 별도 저장하여 활용<br>
+        2. 카카오 채널 가입 활동은 카카오에서 '비아트리스' 채널 직접 검색, 가입 QR코드 별도 저장하여 활용<br>
+        3. Sales 데이터는 각 데이터를 볼 수 있는 사이트에서 확인
+      </div>
+      <textarea class="q-textarea" id="q3n-answer" placeholder="자유롭게 작성해주세요 (필수)"></textarea>
+      <div class="field-error" id="q3n-error">내용을 입력해주세요.</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       SCREEN Q7: 우선순위 정렬
+  ══════════════════════════════ -->
+  <section class="screen" id="screen-q7">
+    <div class="q-meta">
+      <span class="q-tag">Section 2 · Q7</span>
+      <span class="q-section-label">필요 기능 확인</span>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q7</div>
+      <div class="q-text">새로운 ONE App에서 꼭 필요한 기능에 대한 우선순위를 순서대로 표기해주십시오.</div>
+      <div class="q-note">아래 항목을 드래그하여 중요도 순서대로 정렬해주세요. (1순위가 가장 중요)</div>
+      <ul class="sortable-list" id="q7-sortable">
+        <!-- Rendered by JS -->
+      </ul>
+      <div class="drag-hint">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+        드래그하여 순서를 조정하세요
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       SCREEN Q8: 자유의견 + 파일첨부
+  ══════════════════════════════ -->
+  <section class="screen" id="screen-q8">
+    <div class="q-meta">
+      <span class="q-tag">Section 2 · Q8</span>
+      <span class="q-section-label">필요 기능 확인</span>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q8</div>
+      <div class="q-text">본 설문에서 충분히 다루지 못한 내용이 있으시거나, ONE App에 반드시 반영되어야 한다고 생각하시는 의견이 있다면 자유롭게 기술해주십시오.</div>
+      <div class="q-note">개인이 활용하시는 자료 중에서 ONE App에서 벤치마킹할 수 있는 자료(이미지, 파일 등)가 있다면 첨부하여 공유해주시면 감사하겠습니다.</div>
+      <textarea class="q-textarea" id="q8-answer" placeholder="자유롭게 작성해주세요 (필수)"></textarea>
+      <div class="field-error" id="q8-error">내용을 입력해주세요.</div>
+
+      <!-- File Upload Area -->
+      <div class="file-upload-area" id="file-drop-zone" onclick="document.getElementById('file-input').click()">
+        <div class="file-upload-icon">📎</div>
+        <div class="file-upload-text">파일 또는 이미지 첨부</div>
+        <div class="file-upload-sub">클릭하거나 파일을 여기에 드래그하세요<br>이미지, PDF, 문서 등 최대 3MB · 1개 파일</div>
+      </div>
+      <input type="file" id="file-input" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" />
+      <div class="file-list" id="file-list"></div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       SCREEN: THANK YOU
+  ══════════════════════════════ -->
+  <section class="screen" id="screen-thankyou">
+    <div class="thankyou-card">
+      <div class="thankyou-hero">
+        <div class="ty-checkmark">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="ty-title">응답이 완료되었습니다!</div>
+        <div class="ty-sub">소중한 시간을 내어 참여해주셔서 감사합니다.</div>
+      </div>
+      <div class="thankyou-body">
+        <p class="ty-message">
+          귀하의 응답은 ONE App UX/UI 개편을 위한 설계의 핵심 근거로 활용될 예정입니다.
+        </p>
+        <div class="ty-highlight">
+          💡 본 설문 결과를 바탕으로 더 나은 ONE App을 함께 만들어 나가겠습니다.
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ─── BOTTOM NAV BAR ─── -->
+<nav class="nav-bar" id="nav-bar" style="display:none;">
+  <div class="nav-inner">
+    <button class="btn-prev" id="btn-prev" onclick="goBack()">← 이전</button>
+    <button class="btn-next" id="btn-next" onclick="goNext()">다음 →</button>
+  </div>
+</nav>
+
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   DATA DEFINITIONS
+═══════════════════════════════════════════════════════ */
+
+/** 공통 기능 보기 항목 (Q2, Q3, Q4 공유) */
+const FEATURE_OPTIONS = [
+  { value: 'detail_material',   label: '제품 디테일 자료 조회' },
+  { value: 'hcp_promo_history', label: 'HCP Promotional activity history 조회', sub: 'Home 화면, Myforce 데이터 연결' },
+  { value: 'hcp_consent',       label: 'HCP Consent 내역 조회', sub: 'RTE, 카카오' },
+  { value: 'kakao_alarm',       label: '카카오 가입 알림톡 발송' },
+  { value: 'notice_campaign',   label: '공지사항, 캠페인 정보 확인' },
+  { value: 'sales_data',        label: 'Sales 데이터 확인', sub: 'onestop dashboard, myforce dashboard' },
+  { value: 'speaker_pool',      label: 'Speaker pool 확인' },
+  { value: 'intuon',            label: '인투온 사이트 접속', sub: '문헌, 환자 교육용 신청 배송 사이트' },
+  { value: 'm2m_link',          label: 'M2M LINK 세션', sub: 'Call 신청, 맛보기 신청, 진행결과 확인' },
+  { value: 'calendar',          label: 'Calendar', sub: '학회 행사, 팀즈 행사 정보' },
+  { value: 'org_chart',         label: '조직도 정보 확인' },
+  { value: 'other',             label: '기타 (자유 기입)', isOther: true },
+];
+
+const Q5_OPTIONS = [
+  { value: 'complex',     label: '구조가 복잡하여 사용하기 어려움' },
+  { value: 'not_hcp',    label: '내가 담당하는 HCP, 제품 중심으로 자료가 정리되어 있지 않음' },
+  { value: 'alternative', label: '동일 정보를 더 빠르게, 정확하게 얻을 수 있는 대체 수단이 존재' },
+  { value: 'mobile_perf', label: '모바일 환경에서 작동이 원활하지 않음', sub: '속도, 성능' },
+  { value: 'no_feature',  label: '필요로 하는 정보, 기능 자체가 없음' },
+  { value: 'other',       label: '기타 (자유 기입)', isOther: true },
+];
+
+const Q2N_OPTIONS = [
+  { value: 'complex',     label: '구조가 복잡하여 사용하기 어려움' },
+  { value: 'not_hcp',    label: '내가 담당하는 HCP 또는 제품 중심으로 자료가 정리되어 있지 않음' },
+  { value: 'alternative', label: '동일 정보를 더 빠르게, 정확하게 얻을 수 있는 대체 수단이 존재' },
+  { value: 'mobile_perf', label: '모바일 환경에서 작동이 원활하지 않음', sub: '속도, 성능' },
+  { value: 'no_feature',  label: '필요로 하는 정보 또는 기능 자체가 없음' },
+  { value: 'unknown',     label: '어떤 기능이 있는지 잘 모르겠음' },
+  { value: 'login',       label: '로그인 또는 접근이 번거로움' },
+  { value: 'other',       label: '기타 (직접 입력)', isOther: true },
+];
+
+/** Q7 drag-and-drop 항목 */
+const Q7_ITEMS = [
+  { id: 'hcp_summary',    label: 'HCP 별 영업활동 요약',
+    sub: '이번 달 진행된 call/event 횟수, 팀즈제설/심포지엄 참석 현황, consent 동의/가입여부, RTE 발송결과 등' },
+  { id: 'my_summary',     label: '나의 영업활동 요약',
+    sub: 'KPI 달성 또는 캠페인 달성 기준 — call/event 남은 횟수, RTE 발송 남은 갯수 등' },
+  { id: 'market_brief',   label: '시장 정보 브리핑',
+    sub: 'CAMA 팀에서 관리하는 질환, 제품, 정책 관련 시장 정보 연결' },
+  { id: 'mkt_notice',     label: 'MKT 공지사항 / 캠페인 정보 알림',
+    sub: '이번 달에 꼭 챙겨야 하는 공지사항/캠페인 정보' },
+  { id: 'sales_data',     label: 'Sales Data 정보',
+    sub: 'onestop 대시보드, myforce 대시보드 데이터 링크 및 자료' },
+  { id: 'conference',     label: '학회 일정 정보',
+    sub: '단순하게 일정 확인 가능한 구조' },
+  { id: 'today_brief',    label: '오늘의 활동 브리핑 / 알림',
+    sub: 'KPI 달성을 위한 나의 영업활동 메인 알림 (예: "10call 추가 필요", "Target HCP call 미완료" 등)' },
+];
+
+
+/* ═══════════════════════════════════════════════════════
+   STATE MANAGEMENT
+═══════════════════════════════════════════════════════ */
+
+/**
+ * answers 객체 — 모든 응답값을 여기에 저장
+ * GAS 연동 시 이 객체를 JSON.stringify 하여 전송
+ */
+const answers = {
+  q1:          null,      // 'yes' | 'no'
+  q2:          [],        // 최대 3개 선택값 배열
+  q2_other:    '',
+  q3:          [],        // 최대 2개
+  q3_other:    '',
+  q4:          [],        // 최대 3개
+  q4_other:    '',
+  q5:          null,      // 단일 선택
+  q5_other:    '',
+  q6:          '',        // 자유서술
+  q2n:         [],        // 최대 2개
+  q2n_other:   '',
+  q3n:         '',        // 자유서술
+  q7:          [],        // 정렬 결과 (id 배열, 1번이 최우선)
+  q8:          '',        // 자유서술
+  q8_files:    [],        // 파일 메타데이터 (이름, 사이즈, 타입)
+};
+
+/** 현재 표시 중인 화면 ID */
+let currentScreen = 'intro';
+
+/**
+ * 분기에 따른 화면 흐름 정의
+ * Q1 = 예: intro → q1 → q2 → q3 → q4 → q5 → q6 → q7 → q8 → thankyou
+ * Q1 = 아니오: intro → q1 → q2n → q3n → q7 → q8 → thankyou
+ */
+const FLOW_YES = ['q1','q2','q3','q4','q5','q6','q7','q8'];
+const FLOW_NO  = ['q1','q2n','q3n','q7','q8'];
+
+/** 현재 흐름 배열 */
+let currentFlow = FLOW_YES;
+
+/** 현재 흐름 내 인덱스 (0 = q1) */
+let flowIndex = 0;
+
+/** 업로드된 파일 목록 */
+let uploadedFiles = [];
+
+
+/* ═══════════════════════════════════════════════════════
+   RENDERING HELPERS
+═══════════════════════════════════════════════════════ */
+
+/**
+ * 체크박스형 옵션 목록을 렌더링
+ * @param {string} containerId - ul 요소의 id
+ * @param {Array}  options     - 보기 배열 (value, label, sub?, isOther?)
+ * @param {Array}  selected    - 현재 선택된 값 배열
+ * @param {number} maxSelect   - 최대 선택 수
+ * @param {string} qKey        - 'q2' | 'q3' | 'q4' | 'q2n' 등
+ */
+function renderCheckboxOptions(containerId, options, selected, maxSelect, qKey) {
+  const ul = document.getElementById(containerId);
+  ul.innerHTML = options.map(opt => `
+    <li class="option-item ${selected.includes(opt.value) ? 'selected' : ''}"
+        onclick="toggleCheckbox('${qKey}','${opt.value}',${maxSelect})"
+        data-value="${opt.value}">
+      <span class="option-mark square"></span>
+      <span class="option-text">
+        ${opt.label}
+        ${opt.sub ? `<br><small style="color:var(--text-secondary);font-size:11px;">${opt.sub}</small>` : ''}
+      </span>
+    </li>
+  `).join('');
+}
+
+/**
+ * 라디오형(단일선택) 옵션 목록을 렌더링
+ * @param {string} containerId
+ * @param {Array}  options
+ * @param {string|null} selected
+ * @param {string} qKey
+ */
+function renderRadioOptions(containerId, options, selected, qKey) {
+  const ul = document.getElementById(containerId);
+  ul.innerHTML = options.map(opt => `
+    <li class="option-item ${selected === opt.value ? 'selected' : ''}"
+        onclick="selectRadio('${qKey}','${opt.value}')"
+        data-value="${opt.value}">
+      <span class="option-mark"></span>
+      <span class="option-text">
+        ${opt.label}
+        ${opt.sub ? `<br><small style="color:var(--text-secondary);font-size:11px;">${opt.sub}</small>` : ''}
+      </span>
+    </li>
+  `).join('');
+}
+
+/**
+ * Q7 SortableJS 목록 렌더링 + 초기화
+ */
+function renderSortable() {
+  const ul = document.getElementById('q7-sortable');
+  const items = answers.q7.length > 0
+    ? answers.q7.map(id => Q7_ITEMS.find(x => x.id === id)).filter(Boolean)
+    : Q7_ITEMS;
+
+  ul.innerHTML = items.map((item, i) => `
+    <li class="sortable-item" data-id="${item.id}">
+      <span class="sort-rank">${i + 1}</span>
+      <span class="sort-text">
+        ${item.label}
+        <div class="sort-sub">${item.sub}</div>
+      </span>
+      <span class="sort-drag-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="8" y1="6" x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+      </span>
+    </li>
+  `).join('');
+
+  // SortableJS 초기화
+  Sortable.create(ul, {
+    animation: 180,
+    easing: 'cubic-bezier(0.4,0,0.2,1)',
+    ghostClass: 'sortable-ghost',
+    dragClass: 'sortable-drag',
+    onEnd: () => {
+      // 순위 번호 업데이트
+      const lis = ul.querySelectorAll('.sortable-item');
+      lis.forEach((li, i) => {
+        li.querySelector('.sort-rank').textContent = i + 1;
+      });
+      // answers.q7 업데이트
+      answers.q7 = Array.from(lis).map(li => li.dataset.id);
+    }
+  });
+
+  // 초기 q7 order 세팅
+  answers.q7 = items.map(x => x.id);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   SELECTION HANDLERS
+═══════════════════════════════════════════════════════ */
+
+/**
+ * Q1 예/아니오 선택
+ */
+function selectQ1(val) {
+  answers.q1 = val;
+  document.getElementById('q1-yes').classList.toggle('selected', val === 'yes');
+  document.getElementById('q1-no').classList.toggle('selected',  val === 'no');
+  document.getElementById('q1-error').classList.remove('visible');
+
+  // 분기 흐름 결정
+  currentFlow = val === 'yes' ? FLOW_YES : FLOW_NO;
+  flowIndex = 0; // q1 위치 (index 0)
+  updateProgress();
+}
+
+/**
+ * 체크박스 토글 (최대 선택 제한 포함)
+ * @param {string} qKey       - 'q2','q3','q4','q2n'
+ * @param {string} value
+ * @param {number} maxSelect
+ */
+function toggleCheckbox(qKey, value, maxSelect) {
+  const arr = answers[qKey];
+  const idx = arr.indexOf(value);
+
+  if (idx > -1) {
+    // 이미 선택됨 → 해제
+    arr.splice(idx, 1);
+  } else {
+    // 최대 초과 시 토스트
+    if (arr.length >= maxSelect) {
+      showToast(`최대 ${maxSelect}개까지만 선택 가능합니다.`);
+      return;
+    }
+    arr.push(value);
+  }
+
+  // 선택 반영
+  const containerId = `${qKey}-options`;
+  const li = document.querySelector(`#${containerId} [data-value="${value}"]`);
+  if (li) li.classList.toggle('selected', arr.includes(value));
+
+  // 뱃지 업데이트
+  updateLimitBadge(qKey, arr.length, maxSelect);
+
+  // 기타 input 표시/숨김
+  if (value === 'other') {
+    const wrap = document.getElementById(`${qKey}-other-wrap`);
+    if (wrap) wrap.classList.toggle('visible', arr.includes('other'));
+  }
+
+  // 에러 숨기기
+  document.getElementById(`${qKey}-error`)?.classList.remove('visible');
+}
+
+/**
+ * 라디오 선택 (단일)
+ * @param {string} qKey  - 'q5'
+ * @param {string} value
+ */
+function selectRadio(qKey, value) {
+  const prev = answers[qKey];
+  answers[qKey] = value;
+
+  const ul = document.getElementById(`${qKey}-options`);
+  ul.querySelectorAll('.option-item').forEach(li => {
+    li.classList.toggle('selected', li.dataset.value === value);
+  });
+
+  // 기타 input
+  const wrap = document.getElementById(`${qKey}-other-wrap`);
+  if (wrap) wrap.classList.toggle('visible', value === 'other');
+
+  // 에러 숨기기
+  document.getElementById(`${qKey}-error`)?.classList.remove('visible');
+}
+
+/**
+ * 선택 제한 뱃지 업데이트
+ */
+function updateLimitBadge(qKey, current, max) {
+  const badge = document.getElementById(`${qKey}-limit-badge`);
+  if (!badge) return;
+  if (current >= max) {
+    badge.textContent = `${current} / ${max}개 선택됨`;
+    badge.classList.add('warn');
+  } else {
+    badge.textContent = `최대 ${max}개 선택 (현재 ${current}개)`;
+    badge.classList.remove('warn');
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════════════ */
+
+/**
+ * 설문 시작
+ */
+function startSurvey() {
+  document.getElementById('progress-header').style.display = '';
+  document.getElementById('nav-bar').style.display = '';
+  showScreen('q1');
+  flowIndex = 0;
+  updateProgress();
+  updateNavButtons();
+}
+
+/**
+ * 다음 화면으로
+ */
+function goNext() {
+  const screen = currentFlow[flowIndex];
+
+  // 유효성 검사
+  if (!validateScreen(screen)) return;
+
+  // 기타 입력 저장
+  saveOtherInputs(screen);
+
+  // 마지막 질문이면 제출
+  if (flowIndex === currentFlow.length - 1) {
+    submitSurvey();
+    return;
+  }
+
+  flowIndex++;
+  const nextScreen = currentFlow[flowIndex];
+  showScreen(nextScreen);
+  updateProgress();
+  updateNavButtons();
+
+  // 다음 화면 렌더링 (필요 시)
+  renderScreen(nextScreen);
+
+  // 화면 상단으로 스크롤
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * 이전 화면으로
+ */
+function goBack() {
+  if (flowIndex === 0) {
+    // intro로 돌아가기
+    showScreen('intro');
+    document.getElementById('progress-header').style.display = 'none';
+    document.getElementById('nav-bar').style.display = 'none';
+    return;
+  }
+  flowIndex--;
+  const prevScreen = currentFlow[flowIndex];
+  showScreen(prevScreen);
+  renderScreen(prevScreen);
+  updateProgress();
+  updateNavButtons();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * 화면 전환
+ */
+function showScreen(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(`screen-${screenId}`);
+  if (el) el.classList.add('active');
+  currentScreen = screenId;
+}
+
+/**
+ * 화면에 맞는 렌더링 함수 호출
+ */
+function renderScreen(screenId) {
+  switch (screenId) {
+    case 'q2':
+      renderCheckboxOptions('q2-options', FEATURE_OPTIONS, answers.q2, 3, 'q2');
+      updateLimitBadge('q2', answers.q2.length, 3);
+      if (answers.q2.includes('other')) document.getElementById('q2-other-wrap').classList.add('visible');
+      break;
+    case 'q3':
+      renderCheckboxOptions('q3-options', FEATURE_OPTIONS, answers.q3, 2, 'q3');
+      updateLimitBadge('q3', answers.q3.length, 2);
+      if (answers.q3.includes('other')) document.getElementById('q3-other-wrap').classList.add('visible');
+      break;
+    case 'q4':
+      renderCheckboxOptions('q4-options', FEATURE_OPTIONS, answers.q4, 3, 'q4');
+      updateLimitBadge('q4', answers.q4.length, 3);
+      if (answers.q4.includes('other')) document.getElementById('q4-other-wrap').classList.add('visible');
+      break;
+    case 'q5':
+      renderRadioOptions('q5-options', Q5_OPTIONS, answers.q5, 'q5');
+      if (answers.q5 === 'other') document.getElementById('q5-other-wrap').classList.add('visible');
+      break;
+    case 'q2n':
+      renderCheckboxOptions('q2n-options', Q2N_OPTIONS, answers.q2n, 1, 'q2n');
+      updateLimitBadge('q2n', answers.q2n.length, 1);
+      if (answers.q2n.includes('other')) document.getElementById('q2n-other-wrap').classList.add('visible');
+      break;
+    case 'q7':
+      renderSortable();
+      break;
+  }
+}
+
+/**
+ * 진행률 업데이트
+ */
+function updateProgress() {
+  const total = currentFlow.length;
+  const current = flowIndex + 1;
+  const pct = Math.round((current / total) * 100);
+
+  document.getElementById('progress-step').textContent = `${current} / ${total}`;
+  document.getElementById('progress-fill').style.width = `${pct}%`;
+  document.getElementById('progress-pct').textContent = `${pct}%`;
+}
+
+/**
+ * 네비게이션 버튼 상태 업데이트
+ */
+function updateNavButtons() {
+  const isLast = flowIndex === currentFlow.length - 1;
+  const btnNext = document.getElementById('btn-next');
+  btnNext.textContent = isLast ? '제출하기 ✓' : '다음 →';
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   VALIDATION
+═══════════════════════════════════════════════════════ */
+
+/**
+ * 현재 화면의 필수 입력값 검증
+ * @param {string} screenId
+ * @returns {boolean}
+ */
+function validateScreen(screenId) {
+  switch (screenId) {
+    case 'q1':
+      if (!answers.q1) {
+        document.getElementById('q1-error').classList.add('visible');
+        showToast('응답을 선택해주세요.');
+        return false;
+      }
+      return true;
+
+    case 'q2':
+      if (answers.q2.length === 0) {
+        document.getElementById('q2-error').classList.add('visible');
+        showToast('최소 1개 이상 선택해주세요.');
+        return false;
+      }
+      return true;
+
+    case 'q3':
+      if (answers.q3.length === 0) {
+        document.getElementById('q3-error').classList.add('visible');
+        showToast('최소 1개 이상 선택해주세요.');
+        return false;
+      }
+      return true;
+
+    case 'q4':
+      if (answers.q4.length === 0) {
+        document.getElementById('q4-error').classList.add('visible');
+        showToast('최소 1개 이상 선택해주세요.');
+        return false;
+      }
+      return true;
+
+    case 'q5':
+      if (!answers.q5) {
+        document.getElementById('q5-error').classList.add('visible');
+        showToast('응답을 선택해주세요.');
+        return false;
+      }
+      return true;
+
+    case 'q2n':
+      if (answers.q2n.length === 0) {
+        document.getElementById('q2n-error').classList.add('visible');
+        showToast('1개를 선택해주세요.');
+        return false;
+      }
+      return true;
+
+    case 'q6':
+      if (!document.getElementById('q6-answer').value.trim()) {
+        document.getElementById('q6-error').classList.add('visible');
+        showToast('내용을 입력해주세요.');
+        return false;
+      }
+      return true;
+
+    case 'q3n':
+      if (!document.getElementById('q3n-answer').value.trim()) {
+        document.getElementById('q3n-error').classList.add('visible');
+        showToast('내용을 입력해주세요.');
+        return false;
+      }
+      return true;
+
+    case 'q8':
+      if (!document.getElementById('q8-answer').value.trim()) {
+        document.getElementById('q8-error').classList.add('visible');
+        showToast('내용을 입력해주세요.');
+        return false;
+      }
+      return true;
+
+    // 자유서술 및 파일은 선택 사항 → 검증 불필요
+    default:
+      return true;
+  }
+}
+
+/**
+ * 화면별 기타 입력값 저장
+ */
+function saveOtherInputs(screenId) {
+  const map = {
+    q2:  'q2_other',
+    q3:  'q3_other',
+    q4:  'q4_other',
+    q5:  'q5_other',
+    q2n: 'q2n_other',
+  };
+  const key = map[screenId];
+  if (key) {
+    const input = document.getElementById(`${screenId}-other-input`);
+    if (input) answers[key] = input.value.trim();
+  }
+
+  // 자유서술
+  if (screenId === 'q6') answers.q6 = document.getElementById('q6-answer').value.trim();
+  if (screenId === 'q3n') answers.q3n = document.getElementById('q3n-answer').value.trim();
+  // q8 자유서술만 저장. q8_files Base64 변환은 submitSurvey()에서 처리
+  if (screenId === 'q8') {
+    answers.q8 = document.getElementById('q8-answer').value.trim();
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   SUBMIT
+═══════════════════════════════════════════════════════ */
+
+/**
+ * File 객체를 Base64 문자열로 변환하는 유틸 함수
+ * @param {File} file - 변환할 File 객체
+ * @returns {Promise<string>} Base64 문자열 (data URI의 콤마 이후 부분만)
+ */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    // readAsDataURL 결과: "data:image/png;base64,AAAA..."
+    // → 콤마(,) 기준으로 split 후 [1]만 추출해 순수 Base64 문자열 반환
+    reader.onload  = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = () => reject(new Error(`파일 읽기 실패: ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * 마지막 화면 데이터 저장 후 제출
+ * 1. saveOtherInputs()로 현재 화면 텍스트 저장
+ * 2. uploadedFiles(최대 1개, 최대 3MB)를 fileToBase64()로 변환
+ * 3. answers.q8_files에 { name, mimeType, size, base64 } 구조로 저장
+ * 4. GAS URL로 POST 전송
+ */
+async function submitSurvey() {
+  // ── 1. 마지막 화면 입력 저장 ──
+  const lastScreen = currentFlow[flowIndex];
+  saveOtherInputs(lastScreen);
+
+  // Q8 텍스트 최종 보정 (saveOtherInputs와 중복 안전 처리)
+  answers.q8 = document.getElementById('q8-answer')?.value.trim() || '';
+
+  // Q7 최종 순서 저장
+  const sortItems = document.querySelectorAll('#q7-sortable .sortable-item');
+  if (sortItems.length > 0) {
+    answers.q7 = Array.from(sortItems).map(li => li.dataset.id);
+  }
+
+  // 제출 타임스탬프
+  answers.submittedAt = new Date().toISOString();
+
+  // ── 2. 첨부파일 Base64 변환 (최대 1개, 최대 3MB) ──
+  // uploadedFiles는 handleFiles()에서 이미 1개·3MB 제한이 적용된 배열
+  answers.q8_files = await Promise.all(
+    uploadedFiles.map(async (file) => {
+      const base64String = await fileToBase64(file);
+      return {
+        name:     file.name,      // 파일명
+        mimeType: file.type,      // MIME 타입 (GAS에서 Blob 생성 시 사용)
+        size:     file.size,      // 바이트 크기
+        base64:   base64String,   // 순수 Base64 문자열 (GAS → DriveApp.createFile)
+      };
+    })
+  );
+
+  // ── 3. 콘솔 출력 (base64는 생략하여 가독성 확보) ──
+  const logData = {
+    ...answers,
+    q8_files: answers.q8_files.map(f => ({ name: f.name, mimeType: f.mimeType, size: f.size })),
+  };
+  console.log('=== ONE App DI Expert Survey 응답 ===');
+  console.log(JSON.stringify(logData, null, 2));
+  console.log('=====================================');
+
+  // ── 4. 제출 버튼 로딩 상태 ──
+  const btnNext = document.getElementById('btn-next');
+  const originalText = btnNext.textContent;
+  btnNext.textContent = '제출 중...';
+  btnNext.disabled = true;
+
+  // ── 5. Google Apps Script Web App으로 POST 전송 ──
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyUbPhaotBgVPDtTHYZFr4Sy86663gd4SQA9dMe8NfDhviq_9dHxi1VYKHAKu-Xgd2o/exec';
+
+  try {
+    await fetch(GAS_URL, {
+      method:  'POST',
+      mode:    'no-cors',  // GAS는 CORS 헤더를 반환하지 않으므로 no-cors 필수
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(answers),
+    });
+    // no-cors 모드에서는 응답 본문을 읽을 수 없으나
+    // fetch가 reject되지 않으면 전송 성공으로 간주
+    showThankYou();
+  } catch (err) {
+    console.error('제출 실패:', err);
+    btnNext.textContent = originalText;
+    btnNext.disabled    = false;
+    showToast('제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 3500);
+  }
+}
+
+/**
+ * 감사 화면으로 전환
+ */
+function showThankYou() {
+  showScreen('thankyou');
+  document.getElementById('nav-bar').style.display = 'none';
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('progress-pct').textContent = '100%';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════ */
+
+let toastTimer = null;
+
+/**
+ * 토스트 메시지 표시
+ * @param {string} msg
+ * @param {number} duration - ms
+ */
+function showToast(msg, duration = 2400) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   FILE UPLOAD
+═══════════════════════════════════════════════════════ */
+
+/**
+ * 파일 추가 처리
+ * - 최대 1개 파일 허용
+ * - 파일당 최대 3MB 제한
+ */
+function handleFiles(files) {
+  const MAX_SIZE = 3 * 1024 * 1024; // 3MB
+  const MAX_COUNT = 1;
+
+  Array.from(files).forEach(file => {
+    // 최대 개수 초과 검사
+    if (uploadedFiles.length >= MAX_COUNT) {
+      showToast('파일은 최대 1개까지만 첨부 가능합니다.');
+      return;
+    }
+    // 용량 초과 검사
+    if (file.size > MAX_SIZE) {
+      showToast(`${file.name}: 파일 크기가 3MB를 초과합니다.`);
+      return;
+    }
+    // 중복 검사
+    if (uploadedFiles.find(f => f.name === file.name && f.size === file.size)) {
+      showToast('이미 추가된 파일입니다.');
+      return;
+    }
+    uploadedFiles.push(file);
+  });
+  renderFileList();
+}
+
+/**
+ * 파일 목록 렌더링
+ */
+function renderFileList() {
+  const list = document.getElementById('file-list');
+  list.innerHTML = uploadedFiles.map((f, i) => `
+    <div class="file-chip">
+      <span>${getFileIcon(f.type)}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span>
+      <span style="color:var(--text-secondary);margin-right:4px;">${formatSize(f.size)}</span>
+      <span class="file-chip-remove" onclick="removeFile(${i})">✕</span>
+    </div>
+  `).join('');
+}
+
+function removeFile(index) {
+  uploadedFiles.splice(index, 1);
+  renderFileList();
+}
+
+function getFileIcon(type) {
+  if (type.startsWith('image/')) return '🖼️';
+  if (type === 'application/pdf') return '📄';
+  if (type.includes('word')) return '📝';
+  if (type.includes('sheet') || type.includes('excel')) return '📊';
+  if (type.includes('presentation') || type.includes('powerpoint')) return '📑';
+  return '📎';
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+// 파일 input 이벤트
+document.getElementById('file-input').addEventListener('change', e => handleFiles(e.target.files));
+
+// textarea 입력 시 에러 자동 해제
+['q6-answer','q3n-answer','q8-answer'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', () => {
+    const errId = id.replace('-answer', '-error');
+    document.getElementById(errId)?.classList.remove('visible');
+  });
+});
+
+// 드래그 앤 드롭
+const dropZone = document.getElementById('file-drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+});
+
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+
+// Q1에서 분기가 결정되기 전 기본 흐름을 YES로 설정
+currentFlow = FLOW_YES;
+
+</script>
+</body>
+</html>
